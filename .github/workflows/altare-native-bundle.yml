@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: Publish Altare native runtime bundle
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/altare-native-bundle.yml'
+      - 'deploy/altare/**'
+permissions:
+  contents: write
+concurrency:
+  group: fluxer-altare-snap-r7
+  cancel-in-progress: false
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install squashfs support
+        run: sudo apt-get update && sudo apt-get install -y snapd squashfs-tools
+      - name: Download pinned Fluxer Snap revision
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/fluxer-release"
+          cd "$RUNNER_TEMP/fluxer-release"
+          snap download fluxer-server --revision=7
+          test -s fluxer-server_7.snap
+          unsquashfs -d bundle fluxer-server_7.snap
+          test -x bundle/bin/service
+          test -s bundle/opt/fluxer/fluxer_api/dist/AppEntrypoint.js
+          grep -q '^version: 2026.1104.180331' bundle/meta/snap.yaml
+          SOURCE_SERVICE="$RUNNER_TEMP/fluxer-release/bundle/bin/service" \
+            node --input-type=module -e 'import {readFileSync} from "node:fs"; import {patchService} from "./deploy/altare/patch.mjs"; patchService(readFileSync(process.env.SOURCE_SERVICE,"utf8"))'
+          tar --numeric-owner --owner=0 --group=0 -czf fluxer-server-amd64-r7.tar.gz -C bundle .
+          sha256sum fluxer-server-amd64-r7.tar.gz > fluxer-server-amd64-r7.tar.gz.sha256
+      - name: Publish pinned immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/fluxer-release"
+          TAG=altare-bundle-snap-r7
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; preserving pinned immutable artifacts.'
+            exit 0
+          fi
+          gh release create "$TAG" --target "${GITHUB_SHA}" \
+            --title 'Fluxer Altare native bundle (Snap rev 7)' \
+            --notes 'Extracted official Fluxer Snap rev 7 for unprivileged Altare runtime. Do not expose without PostgreSQL/storage/TURN checks.' \
+            fluxer-server-amd64-r7.tar.gz fluxer-server-amd64-r7.tar.gz.sha256
