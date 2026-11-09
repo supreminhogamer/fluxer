@@ -1,0 +1,13 @@
+{
+  "name": "fluxer-altare-runtime",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Unprivileged, single-server Fluxer supervisor for GitHub deployments on Altare",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node --check launcher.mjs && node --check configure.mjs && node --check patch.mjs && node --test tests/*.test.mjs",
+    "start": "node launcher.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}
