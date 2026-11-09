@@ -8,7 +8,7 @@ This directory contains a native, **no-Docker / no-Snap-daemon / no-systemd** la
 
 1. Merge this PR to main and ensure the **Publish Altare native runtime bundle** GitHub Action produces the tag `altare-bundle-snap-r7`. The runtime downloads and verifies that release using SHA-256; it will refuse to run before the asset is published.
 2. On Altare, import `supreminhogamer/fluxer`, and if possible set application root to `deploy/altare`. Build command: `npm run build`. Start command: `npm start`. If the root cannot be changed, build with `cd deploy/altare && npm run build`, start with `node deploy/altare/launcher.mjs`. Use Node.js 20+.
-3. Set the public URL as `ALTARE_URL` (e.g. `https://chat.example.com`) if Altare does not inject it automatically; `FLUXER_PUBLIC_ORIGIN` is an alternative. Set `PORT` to the port forwarded by Altare.
+3. Use a **separately configured HTTPS reverse proxy or tunnel** for `https://chat.example.com`: Altare's generic web-app hosting docs do **not** provide custom domains and HTTPS automatically. Set `FLUXER_PUBLIC_ORIGIN=https://chat.example.com` (or `ALTARE_URL`) yourself. Set `PORT` to the Altare-allocated listening port. The proxy must forward WebSocket connections and the original Host header.
 4. A **non-root** process can run bundled PostgreSQL. If your Altare sandbox is UID 0 (as in the previous sandbox), you **must** configure an external persistent PostgreSQL using `FLUXER_POSTGRES_URL` (or `DATABASE_URL`). PostgreSQL refuses to run as root. Do not put credentials in Git.
 5. Set `FLUXER_ALTARE_DATA_DIR` to an actually persistent Altare volume. Default `~/fluxer-data` is NOT guaranteed to persist through redeploys. Keep backups of state, object data and secrets.
 6. Retrieve the setup token from the private data directory's `secrets.env` in your server terminal, never in public logs.
@@ -33,5 +33,7 @@ This directory contains a native, **no-Docker / no-Snap-daemon / no-systemd** la
 | `FLUXER_LIVEKIT_TCP_PORT`, `FLUXER_LIVEKIT_UDP_PORT` | Media allocations |
 | `FLUXER_LIVEKIT_TURN_SERVERS` | JSON TURN config |
 | `FLUXER_ALTARE_BUNDLE_URL` / `FLUXER_ALTARE_BUNDLE_SHA256_URL` | Override trusted bundle URLs |
+
+Altare's public docs also do not guarantee selecting a repository subdirectory as a build root, so configuring the build/start command may be necessary; pure import-only setup is not assured.
 
 Run `cd deploy/altare && npm test && npm run build` to validate configuration and Snap-script patch logic. Passing these tests does **not** establish operational compatibility with Altare; perform a full deployment and voice, media and persistence smoke test before production.
