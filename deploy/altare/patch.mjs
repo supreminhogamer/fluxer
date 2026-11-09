@@ -37,7 +37,7 @@ const postgres = `postgres)
     "$PG_BIN/pg_isready" -q -h "$pgrun" -p "$PORT_POSTGRES" || die "PostgreSQL did not become ready"
     if ! "$PG_BIN/psql" -h "$pgrun" -p "$PORT_POSTGRES" -U fluxer -d postgres -Atc \\
         "SELECT 1 FROM pg_database WHERE datname = 'fluxer'" | grep -q 1; then
-        "$PG_BIN/createdb" -h "$PORT_POSTGRES" -U fluxer fluxer
+        "$PG_BIN/createdb" -h "$pgrun" -p "$PORT_POSTGRES" -U fluxer fluxer
     fi
     mark_ready postgres
     wait "$pg"
